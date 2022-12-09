@@ -19,7 +19,7 @@ def plot_to_png(fig):
 
 def set_view_and_save_img(fig, ax, views):
     for elev, azim in views:
-        ax.view_init(elev=elev, azim=azim)
+        ax.view_init(elev=0, azim=-90)
         yield plot_to_png(fig)
 
 

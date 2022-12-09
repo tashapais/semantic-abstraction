@@ -1,4 +1,4 @@
-from plot_utils import plot_pointcloud
+from  plot_utils import plot_pointcloud
 from CLIP.clip import ClipWrapper, saliency_configs, imagenet_templates
 import imageio
 import typer
@@ -22,10 +22,11 @@ def generate_relevancy_image(img, labels, prompts):
         **saliency_configs["ours"](h),
     )[0]
     
-    if(len(labels)>1):
-        grads -= grads.mean(axis=0)
+    #if(len(labels)>1):
+    #    grads -= grads.mean(axis=0)
     
     grads = grads.cpu().numpy()
+    
     return grads
 
 def get_depth_pointcloud(depth_img, cam_intr, cam_pose=None):
@@ -58,17 +59,9 @@ def get_depth_pointcloud(depth_img, cam_intr, cam_pose=None):
     cam_pts[:,[1]] = -cam_pts[:,[1]]
     cam_pts[:,[1, 2]] = cam_pts[:,[2, 1]]
     
-    cam_pts -= cam_pts.mean(axis=0)
         
     min_dist = np.inf
     min_point = None
-    for i, pt in enumerate(cam_pts):
-        r_dist = np.linalg.norm(pt-np.array([0,0,0]))
-        if(r_dist<min_dist):
-            min_dist = min(min_dist, r_dist)
-            min_point = pt 
-    
-    cam_pts -= min_point
     
     return cam_pts
 
@@ -77,7 +70,7 @@ def return_cam_pts(depth_image, cam_intr, cam_pose):
     cam_pts = get_depth_pointcloud(depth_image, cam_intr, cam_pose)     
     return cam_pts
 
-def return_relevancy_pts(image, labels, prompts):
+def return_relevancy_pts_list(image, labels, prompts):
     '''Visualizes the pointcloud 
     Args:
         relevancy_img_path: the file path for the relevancy image path
@@ -86,11 +79,23 @@ def return_relevancy_pts(image, labels, prompts):
         cam_pose: (optional) 3x4 float array of camera pose matrix
     '''
     image = np.array(image)
-    relevancy_grads = generate_relevancy_image(image, labels, prompts)    
-    relevancy_pts = relevancy_grads.flatten()
+    relevancy_pts_list = generate_relevancy_image(image, labels, prompts)
 
-    return relevancy_pts
+    return relevancy_pts_list
 
 
-def visualize_point_cloud(cam_pts, relevancy_pts):
-    plot_pointcloud(cam_pts, relevancy_pts,show_plot=True,num_points=1000000)
+def visualize_point_clouds(cam_pts, relevancy_pts_list, labels):
+    cam_pts -= cam_pts.mean(axis=0)
+
+    for i, relevancy_pts in enumerate(relevancy_pts_list):
+        relevancy_pts = relevancy_pts.flatten()
+        print("Label=",labels[i])
+        plot_pointcloud(cam_pts, relevancy_pts,show_plot=True,num_points=1000000)
+        
+        
+
+def return_highest_relevancy_pt(cam_pts, relevancy_pts):
+    highest_idx = np.argmax(relevancy_pts)
+    match_location = cam_pts[highest_idx]
+    return match_location
+    
